@@ -1,6 +1,7 @@
-# Class 1 Week 3 -- Pandas Aggregation approaches
+# Pandas Aggregation approaches
 
-# groupby() speeds up the task of aggregating data.  Split data into chunks based on some key values, 
+# groupby() speeds up the task of aggregating data.  
+# Split data into chunks based on some key values, 
 # apply computation to those chunks, and combine the results back together:  "Split-apply-combine".
 
 import pandas as pd
@@ -8,7 +9,7 @@ import numpy as np
 import timeit
 
 # Census data:
-df = pd.read_csv('Course_1/resources/week-2/datasets/census.csv')
+df = pd.read_csv('datasets/census.csv')
 # Exclude state-level summarizations (40):
 df = df[df['SUMLEV']==50]
 df.head()
@@ -54,7 +55,7 @@ for group, frame in df.groupby(set_batch_number):
 
 # Another group by example using Air-bnb data:
 
-df = pd.read_csv('Course_1/resources/week-3/datasets/listings.csv')
+df = pd.read_csv('datasets/listings.csv')
 df.head(2)
 
 # Suppose we are interested in cancellation policy and review scores, and want to group by both of these columns.
@@ -123,7 +124,7 @@ df.groupby('cancellation_policy').filter(lambda x: np.nanmean(x['review_scores_v
 # Most common operation invoked on the groupby object is the apply() function.  
 # Lets you apply an arbitrary function to each group, and stitch the results into a df where the index is preserved.
 
-df = pd.read_csv('Course_1/resources/week-3/datasets/listings.csv')
+df = pd.read_csv('datasets/listings.csv')
 df = df[['cancellation_policy', 'review_scores_value']]
 df.head()
 
