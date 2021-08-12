@@ -1,0 +1,62 @@
+
+# Load list of indicators of energy supply and renewable electricity production from the United Nations for the year 2013, and put into a DataFrame.
+# Exclude the footer and header information from the datafile. 
+# Change the column labels so that the columns are:  ['Country', 'Energy Supply', 'Energy Supply per Capita', '% Renewable]
+# Convert Energy Supply to gigajoules.  Rename countries as needed and remove parens.
+# Load GDP data -- 1960 to 2015 from World Bank.  Skip the header and rename countries:
+# Load the Sciamgo Journal and Country Rank data, which ranks countries based on their journal contributions in the aforementioned area.
+# Join the three datasets into a new dataset, using only the last 10 years (2006-2015) of GDP data and only the top 15 countries by Scimagojr 'Rank' (Rank 1 through 15).
+
+def answer_one():
+    
+    import pandas as pd
+    import numpy as np
+    import warnings
+    warnings.filterwarnings('ignore')
+    
+    # Energy data:
+    energy = pd.read_excel('assets/Energy Indicators.xls', header=17, usecols='C:F', skipfooter=38)
+    energy = energy.rename(columns={'Unnamed: 2' : 'Country', 'Petajoules' : 'Energy Supply', 
+                                'Gigajoules' : 'Energy Supply per Capita', '%' : '% Renewable'})
+    energy['Energy Supply'] = energy['Energy Supply'] * 1000000 
+    energy['Energy Supply'] = energy['Energy Supply'].replace(r'^.*$', np.nan, regex=True)
+    energy['Energy Supply per Capita'] = energy['Energy Supply per Capita'].replace(r'^.*$', np.nan, regex=True)
+    energy['Country'][43]  = 'Hong Kong'
+    energy['Country'][98]  = 'Iran'
+    energy['Country'][164] = 'South Korea'
+    energy['Country'][214] = 'United Kingdom'
+    energy['Country'][216] = 'United States'
+    energy['Country'] = energy['Country'].replace("[\(].*[\)]", "", regex=True)
+    energy['Country'] = energy['Country'].replace("\d+", "", regex=True)
+    energy.set_index('Country', inplace=True)
+    energy.sort_index(inplace=True)
+    energy
+
+    # GDP data:
+    GDP = pd.read_csv('assets/world_bank.csv', header=4)
+    GDP = GDP.rename(columns={'Country Name' : 'Country'})
+    GDP['Country'][93]  = 'Hong Kong'
+    GDP['Country'][109] = 'Iran'
+    GDP['Country'][123] = 'South Korea'
+    GDP.set_index('Country', inplace=True)
+    GDP.sort_index(inplace=True)
+    # DROP columns with unwanted years
+    GDP.drop(GDP.iloc[:, 0:49], axis=1, inplace=True)
+    GDP
+
+    # ScimEn data:
+    ScimEn = pd.read_excel('assets/scimagojr-3.xlsx')
+    ScimEn.set_index('Country', inplace=True)
+    ScimEn.sort_index(inplace=True)
+    # DROP rows with Rank < 16
+    ScimEn = ScimEn[ScimEn['Rank'] < 16]
+    ScimEn
+    
+    # Merge and Sort by Rank
+    df = pd.merge(pd.merge(ScimEn, energy, how='inner', left_index=True, right_index=True), 
+                              GDP, how='inner', left_index=True, right_index=True)
+    df.sort_values(by='Rank', ascending=True, inplace=True)
+    return df
+
+# Invoke:
+answer_one()
