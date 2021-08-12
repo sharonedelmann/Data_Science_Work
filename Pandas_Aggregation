@@ -1,0 +1,145 @@
+# Class 1 Week 3 -- Pandas Aggregation approaches
+
+# groupby() speeds up the task of aggregating data.  Split data into chunks based on some key values, 
+# apply computation to those chunks, and combine the results back together:  "Split-apply-combine".
+
+import pandas as pd
+import numpy as np
+import timeit
+
+# Census data:
+df = pd.read_csv('Course_1/resources/week-2/datasets/census.csv')
+# Exclude state-level summarizations (40):
+df = df[df['SUMLEV']==50]
+df.head()
+
+#################
+
+# Here's the traditional iteration approach:
+for state in df['STNAME'].unique():
+    # Calc avg for each state
+    avg = np.average(df.where(df['STNAME']==state).dropna()['CENSUS2010POP'])
+    print('Counties in state ' + state +
+          ' have an average population of ' + str(avg))
+          
+#################
+
+# Try the same using Groupby:
+for group, frame in df.groupby('STNAME'):
+    # Groupby returns a tuple, where first value is key for groupby, and 2nd is projected dataframe found for that group
+    avg = np.average(frame['CENSUS2010POP'])
+    print('Counties in state ' + group +
+          ' have an average population of ' + str(avg))
+          
+#################
+
+# Instead of grouping by a column you can also provide a function to group by.
+# You first have to set the index of the data frame to be the column you want to group by.
+# Suppose we want to split the data alphabetically in thirds
+
+df = df.set_index("STNAME")
+def set_batch_number(item):
+    if item[0]<'M':
+        return 0
+    if item[0]<'Q':
+        return 1
+    return 2
+
+for group, frame in df.groupby(set_batch_number):
+    print('There are ' + str(len(frame)) + ' records in group ' + str(group) + ' for processing.')
+
+# Notice that we didn't have to pass a param to the groupby -- it will automatically use the index column 
+
+#################
+
+# Another group by example using Air-bnb data:
+
+df = pd.read_csv('Course_1/resources/week-3/datasets/listings.csv')
+df.head(2)
+
+# Suppose we are interested in cancellation policy and review scores, and want to group by both of these columns.
+# One option would be to promote them to a multi-index and call groupby()
+df = df.set_index(['cancellation_policy','review_scores_value'])
+# Have to specify to groupby which index levels we want to groupby -- it doesn't assume
+for group, frame in df.groupby(level=(0,1)):
+    print(group)
+
+#################
+
+# Suppose we want to separate out all the 10's from those under 10?  We could use a function to manage the groupings
+
+def grouping_fun(item):
+    if item[1] == 10.0:
+        return(item[0],"10.0")
+    else:
+        return(item[0],"not 10.0")
+        
+for group, frame in df.groupby(by=grouping_fun):
+    print(group)
+    
+#################
+
+# 3 broad categories of data processing that occur during the APPLY step: (1) Aggregation (2) Transformation (3) Filtration
+# Method agg() on the groupby object. Pass it a dictionary of the cols we want to agg and the function we want to apply
+
+df = df.reset_index()
+
+# Group by cancellation policy and find the average review score by group, and excluding NaNs.
+# Pass dictionary of columns to agg and function to apply
+df.groupby("cancellation_policy").agg({"review_scores_value":np.nanmean})
+
+# To aggregate by multiple functions or multiple columns
+df.groupby("cancellation_policy").agg({"review_scores_value":(np.nanmean,np.nanstd),
+                                       "reviews_per_month":np.nanmean})
+
+#################
+
+# Transformation with groupby
+
+# Different from agg, as agg returns a single value per col, so one row per group.
+# transform() returns an object that's the same size as the group.  Basically it broadcasts the function you supply over the df
+
+# Suppose we want average rating values in a given group by cancellation policy, but keep the df shape to show deltas
+
+cols=['cancellation_policy','review_scores_value']
+# Transform df and store in its own new df
+transform_df=df[cols].groupby('cancellation_policy').transform(np.nanmean)
+transform_df.head()
+
+transform_df.rename({'review_scores_value':'mean_review_scores'}, axis='columns', inplace=True)
+df = df.merge(transform_df, left_index=True, right_index=True)
+df.head()
+# New column was created, mean_review_scores
+# Now we can create the diff between a given row and its group means
+df['mean_diff']=np.absolute(df['review_scores_value'] - df['mean_review_scores_x'])
+df['mean_diff'].head()
+
+#################
+
+# Filtering and Apply with groupby
+
+df.groupby('cancellation_policy').filter(lambda x: np.nanmean(x['review_scores_value'])>9.2)
+
+# Most common operation invoked on the groupby object is the apply() function.  
+# Lets you apply an arbitrary function to each group, and stitch the results into a df where the index is preserved.
+
+df = pd.read_csv('Course_1/resources/week-3/datasets/listings.csv')
+df = df[['cancellation_policy', 'review_scores_value']]
+df.head()
+
+# Previously when we wanted to get avg score of a listing and its deviation from the group mean, 
+# it was a 2-step process: Had to transform() on the groupby object then broadcast to create a new column.
+# With apply() we can wrap this logic in one place.
+
+def calc_mean_review_scores(group):
+    # group is a full dataframe of whatever we've grouped by
+    avg = np.nanmean(group['review_scores_value'])
+    group['review_scores_mean'] = np.abs(avg - group['review_scores_value'])
+    return group
+
+df.groupby('cancellation_policy').apply(calc_mean_review_scores).head()
+
+#################
+
+
+
