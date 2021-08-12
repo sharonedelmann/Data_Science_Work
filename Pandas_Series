@@ -1,0 +1,97 @@
+# Series - 2 columns of data -- 1st is index and 2nd is the data
+
+import pandas as pd
+# Automatically indexes with integers starting with 0
+students = ['Alice', 'Jack', 'Molly']
+pd.Series(students)
+
+numbers = [1,2,3]
+pd.Series(numbers)
+
+# pandas converts data type None to a special floating point value NaN (Not a Number)
+students = ['Alice','Jack', None]
+pd.Series(students)
+
+# Because None was converted to float NaN, so it then also will convert these integers to floats:
+numbers = [1,2,None]
+pd.Series(numbers)
+
+# NaN is NOT equivalent to None.  Can't even do an equality test of NaN to NaN.  
+# Need to use special functions to test for the presence of NaN, like np.isnan 
+
+# Pandas sets string data to dtype "object" :
+student_scores = {'Alice': 'Physics',
+                  'Jack': 'Chemistry',
+                  'Molly': 'English'}
+s = pd.Series(student_scores)
+s
+
+# pandas implements the index as a numpy array with the dtype value set:
+s.index
+
+# Create a more complex type of data, say a list of tuples:
+students = [("Alice","Brown"), ("Jack","White"), ("Molly","Green")]
+pd.Series(students)
+
+# See above that the tuples are stored in the series, and the type is object
+
+# Can also pass in the index as a list to the series:
+s = pd.Series(['Physics', 'Chemistry', 'English'], index=['Alice','Jack','Molly'])
+
+# What happens if your list of values in the index ar
+e not aligned with the keys in your dictionary for creating the series?
+# Pandas favors the index you provided, ignoring dict keys not in the index, and including index values not in dict:
+s = pd.Series(student_scores, index=['Alice', 'Molly', 'Sharon'])
+
+# A pandas Series can be queried by index position or index label. 
+# To query by numeric location, starting at zero, use the iloc attribute. To query by label, use loc
+
+students_classes = {'Alice': 'Physics',
+                    'Jack': 'Chemistry',
+                    'Molly': 'English',
+                    'Sam' : 'History'}
+s = pd.Series(students_classes)
+
+s.iloc[3]
+s.loc['Molly']
+# Could just say 's[3]' in this case, but there is a problem when the index is integers -- pandas doesn't know. 
+# So best to always use loc and iloc attributes
+
+### Using pandas functions vs iterating -- Major performance improvement
+
+# Different ways of calculating -- iterate through vs. using pandas functions
+
+import numpy as np
+numbers = pd.Series(np.random.randint(1,1000,10000))
+numbers.head()
+len(numbers)
+
+# To get sum, could iterate.  Use magic function to see how long it takes to run:
+%%timeit -n 100
+total = 0
+for number in numbers:
+    total+=number
+total/len(numbers)
+
+# Compare to using pandas function:
+total = np.sum(numbers)
+total/len(numbers)
+# Above is much faster because of vectorization
+
+# A feature in Numpy and pandas is broadcasting -- apply an operation to every value in a series.
+# Much faster to use broadcasting than to iterate through the series 
+numbers+=2
+numbers.head()
+
+
+
+
+
+
+
+
+
+
+
+
+
