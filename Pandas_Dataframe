@@ -1,0 +1,197 @@
+# Pandas Dataframe
+
+# DataFrame is a 2-D Series object w/ index and multiple columns of content, each col w label.  
+# Can think of as a 2-axes labeled array
+
+# Create 3 Series:
+record1 = pd.Series({'Name': 'Alice',
+                        'Class': 'Physics',
+                        'Score': 85})
+record2 = pd.Series({'Name': 'Jack',
+                        'Class': 'Chemistry',
+                        'Score': 82})
+record3 = pd.Series({'Name': 'Helen',
+                        'Class': 'Biology',
+                        'Score': 90})
+
+# Create DataFrame from the above group of Series, where each Series represents a row of data.
+df = pd.DataFrame([record1, record2, record3],
+                  index=['school1', 'school2', 'school1'])
+                  
+# Similar to Series, extract data using .iloc and .loc attributes.
+df.loc['school2']
+
+# Check the data type:
+type(df.loc['school2'])
+
+# To select a single column, don't use loc/iloc. Instead
+df['Name']
+
+type(df['Name'])
+
+df.loc['school1']['Name']  #  Chaining -- indexing off the return of another index
+
+print(type(df.loc['school1']))  # Should be a DataFrame
+print(type(df.loc['school1']['Name']))  # Should be a Series
+
+# Chaining, by indexing on the return type of another index, should be avoided because costly and unpredictable.
+# Alternatively, can use slicing, which iloc attribute supports.
+# Suppose we want all rows, and only certain columns. Use colon for full slice from beginning to end. Use List of col names:
+
+df.loc[:,['Name','Score']]
+
+#############  Deleting and Adding ############
+
+# Deleting data in Series and DataFrames is easy, using DROP function.
+# Does not change the DataFrame by default!  Instead returns you a copy, with the original still intact:
+df.drop('school1')
+
+# Drop has optional params 'inplace' and the axis to be dropped (0 is default for row ;  and 1 for column)
+copy_df = df.copy()
+copy_df.drop('Name', inplace=True, axis=1)
+copy_df
+
+# Another way to delete a column -- using DEL keyword and the indexing operator.  This Deletes in place!
+
+del copy_df['Class']
+copy_df
+
+# Adding a column is easy -- use indexing operator ; Assign some value
+df['ClassRanking'] = None
+df
+
+#############  Dataframe Indexing and Loading ############
+
+import pandas as pd
+# Pandas makes it easy to turn a CSV into a DataFrame
+df = pd.read_csv('grad_admissions.csv')
+# Can specify a column to use as index:
+df = pd.read_csv('grad_admissions.csv', index_col=0)
+df.head()
+
+# Rename columns
+new_df = df.rename(columns={'LOR' : 'Letter of Recommendation'})
+
+# Strip spaces and tabs:
+new_df = new_df.rename(mapper=str.strip, axis='columns')
+new_df
+
+# Use attribute 'columns':
+df.columns  #See space in 'GRE Score ' in old 'df' dataframe:
+new_df.columns
+
+# To directly modify subset of column names, can use LIST:
+cols = list(df.columns)
+# Change all column names to lowercase and strip:
+cols = [x.lower().strip() for x in cols]
+# Then overwrite what's in columns attribute:
+df.columns = cols
+df.head()
+
+###########  Querying a dataframe ##########
+
+# Boolean masking is important tool -- at the heart of fast and efficient querying in numpy and pandas
+# A boolean mask is an array which can be 1-d like a Series or 2-d like a DataFrame, where each value is T or F
+# This array is overlaid on top of the data structure we're querying.  Any cell aligned w/ T will be admitted into final result
+
+import pandas as pd
+df = pd.read_csv('grad_admissions.csv', index_col=0)
+df.columns = [x.lower().strip() for x in df.columns]
+df.head()
+
+# Example: students with chance of admin > 0.7
+admit_mask = df['chance of admit'] > 0.7
+admit_mask
+
+# In the above, we broadcast a comparision operator to create a boolean mask -- t or f depending on results of the comparison
+# The result is a series, since only one column is being operated on, filled with either t or f
+# Then lay the mask on top to "hide" the data you don't want, by using the .where function:
+
+df.where(admit_mask).head()
+
+# If we don't want the NaN data:
+df.where(admit_mask).dropna()
+
+# More common than using where() and dropna() --> Overloading the indexing operator:
+df[df['chance of admit'] > 0.7]
+
+# Here's what the indexing operator can do on a DataFrame, all of which mimic .loc or .where().dropna():
+# (1) Project a single column:
+df['gre score'].head()
+# (2) Can give list of columns:
+df[['gre score','toefl score']].head()
+# (3) Send it a boolean mask
+df[df['gre score'] > 325].head()
+
+# What if multiple criteria?  Sort of awkward but...
+(df['chance of admit'] > 0.7) & (df['chance of admit'] < 0.9)
+
+# Alternatively, can get rid of comparison operator and use built-in functions:
+df['chance of admit'].gt(0.7) & df['chance of admit'].lt(0.9) 
+
+# Can chain the above too:
+df['chance of admit'].gt(0.7).lt(0.9)
+
+
+###########  Indexing dataframes ##########
+
+# Both Series and DataFrames can have indices applied to them, which is essentially a row-level label.
+# In pandas, the rows correspond to axis zero. 
+# Can be auto-generated ; or can be set explicitly ; or can use the set_index() function
+
+# set_index() is descructive -- doesn't keep current index.
+import pandas as pd
+df = pd.read_csv('grad_admissions.csv', index_col=0)
+df.head()
+
+# Suppose we don't want to use Serial No. as index anymore:
+# Copy indexed data into its own NEW column
+df['Serial Number'] = df.index
+# Then set the index to a different column
+df = df.set_index('Chance of Admit')
+df.head()
+
+# To get rid of an index completely, and have pandas generate a default numbered index -- use reset_index()
+df = df.reset_index()
+df.head()
+
+# Multi-level indexing, sort of like composite keys in a relational database  
+# To create a multi-level index, call set_index() and give list of columns to be promoted
+
+df = pd.read_csv('datasets/census.csv')
+df.head()
+
+# Run unique() on a column to see the different values:
+df['SUMLEV'].unique()
+
+# Exclude certain rows
+df = df[df['SUMLEV'] == 50]
+df.head()
+
+# Keep only certain columns:
+columns_to_keep = ['STNAME','CTYNAME','BIRTHS2010','BIRTHS2011', 'BIRTHS2012','BIRTHS2013', 'BIRTHS2014', 'BIRTHS2015',
+                   'POPESTIMATE2010', 'POPESTIMATE2011', 'POPESTIMATE2012', 'POPESTIMATE2013', 'POPESTIMATE2014', 'POPESTIMATE2015']
+df = df[columns_to_keep]
+df.head()
+
+# Want index to be combo of state and county
+df = df.set_index(['STNAME','CTYNAME'])
+df.head()
+
+# How to query this dataframe -- loc attribute
+# When using a MultiIndex, must provide args in order by level.
+
+df.loc['Virginia','Fairfax County']
+
+# To compare two counties
+df.loc[ [('Virginia', 'Fairfax County'),
+         ('Virginia', 'Loudoun County')] ]
+         
+         
+
+
+
+
+
+
+
